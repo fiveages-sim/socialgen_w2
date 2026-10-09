@@ -1,0 +1,71 @@
+# Draft Arena registration for FiveAges W2.
+# Copy to: arena_robots/arena_robots/robots/FiveAges_W2/model_params.yaml
+#
+# NOT calibrated. Before the first launch, confirm:
+#   - usd_redirect exists inside the Isaac container
+#   - lidar / camera ROS topic names match payloads/ROS/ros2.usda
+#   - camera_prim_suffix exists under /World/Robots/<robot_stage_name>/
+#   - footprint and robot_radius match the USD
+#
+# Head-camera suffix below is taken from a FaSim W2 env layer
+# (Head_V1/head_link2/head_camera/head_camera). Re-check on the spawned stage.
+
+observation_sources_string: lidar
+observation_sources:
+  - lidar
+observation_sources_string_global: lidar
+collision_monitor_sources:
+  - lidar
+observation_sources_dict:
+  lidar:
+    # TODO: replace with the LaserScan topic the W2 ROS graph actually publishes.
+    topic: ${namespace}/scan
+    sensor_frame: ${frame}lidar_frame
+    max_obstacle_height: 2.0
+    clearing: true
+    marking: true
+    data_type: "LaserScan"
+    raytrace_max_range: 8.0
+    raytrace_min_range: 0.0
+    obstacle_max_range: 2.0
+    obstacle_min_range: 0.0
+    observation_persistence: 0.0
+
+robot_base_frame: base_link
+robot_odom_frame: odom
+robot_sensor_frame: lidar_frame
+robot_model: FiveAges_W2
+
+# TODO: point at the USD Isaac can open, with ROS enabled.
+# Examples (pick one that exists in the container):
+#   usd_redirect: ../../../deps/robot_usds/humanoid/FiveAges_W2/FiveAges_W2.usd
+#   usd_redirect: /data/fasim/robots/humanoid/FiveAges/Gen2/W2/FiveAges_W2.usda
+usd_redirect: ../../../deps/robot_usds/humanoid/FiveAges_W2/FiveAges_W2.usd
+
+robot_radius: 0.45
+scale: 1.0
+# TODO: replace with the real chassis outline in metres.
+footprint: "[ [0.35, 0.30], [0.35, -0.30], [-0.35, -0.30], [-0.35, 0.30] ]"
+is_holonomic: false
+z_offset: 0.0
+
+max_vel_x: 0.4
+max_vel_theta: 1.0
+max_speed_xy: 0.4
+velocity_smoother_max_velocity: [0.4, 0.0, 1.0]
+velocity_smoother_min_velocity: [0.0, 0.0, -1.0]
+velocity_smoother_max_accel: [0.4, 0.0, 1.5]
+velocity_smoother_max_decel: [-0.4, 0.0, -1.5]
+
+data_logger:
+  robot_stage_name: FiveAges_W2
+  camera_prim_suffix: Head_V1/head_link2/head_camera/head_camera
+  # TODO: confirm the lidar prim relative to the spawned robot root.
+  lidar_prim_suffix: base_link
+  pedestrian_root_path: /World/Pedestrians
+
+snapshot:
+  head_camera_suffix: Head_V1/head_link2/head_camera/head_camera
+  back_camera_suffix: Head_V1/head_link2/head_camera/head_camera
+  topdown_half_extent: 6.0
+  topdown_height: 3.0
