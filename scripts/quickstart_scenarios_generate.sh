@@ -24,5 +24,7 @@ python scripts/manual_scenario_editor.py --scene MWHLEPQKTIFZIAABAAAAAAA8_usd
 # Then launch (see docs/LAUNCH_W2.md):
 #   cd ~/FiveAges-VLN/arena_ws && source ./arena
 #   ros2 launch arena_bringup arena.launch.py \
-#     world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=false
+#     sim:=isaac robot:=FiveAges_W2 world:=grscenes_30 \
+#     tm_robots:=scenario tm_obstacles:=scenario save_data:=false
+#   ros2 param set /task_generator_node task.scenario.file scenario_001
 EOF

@@ -67,4 +67,4 @@ ARENA_SRC=~/FiveAges-VLN/Arena_W2 \
   ~/SocialNav/scenarios_generate/new_outputs/MWHLEPQKTIFZIAABAAAAAAA8_usd/scenario_001/generated_scenario.yaml
 ```
 
-然后用 `world:=grscenes_30` 和 `scenario:=scenario_001` 启动。见 [LAUNCH_W2.zh-CN.md](LAUNCH_W2.zh-CN.md)。
+然后用 `sim:=isaac`、`world:=grscenes_30`、`tm_robots:=scenario`、`tm_obstacles:=scenario` 启动，并把 `task.scenario.file` 设成 `scenario_001`。见 [LAUNCH_W2.zh-CN.md](LAUNCH_W2.zh-CN.md)。

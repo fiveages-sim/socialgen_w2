@@ -48,27 +48,24 @@ Before the first launch, replace the placeholders:
 | --- | --- |
 | `usd_redirect` | Path Arena/Isaac can read. FaSim asset: `FiveAges_W2.usda` with `ROS=enable`. Arena also vendors `robot_usds/humanoid/FiveAges_W2`. |
 | `robot_base_frame` | W2 art root is `base_link`. |
-| lidar / depth `topic` | Must match the W2 ROS graph (`payloads/ROS/ros2.usda`), not Ai2_Bot2 or LunarBot. |
+| lidar / depth `topic` | Must match the W2 ROS graph after the first Play (`ros2 topic list`). |
 | `data_logger.camera_prim_suffix` | Draft from a W2 env layer: `Head_V1/head_link2/head_camera/head_camera`. Confirm on the spawned stage under `/World/Robots/...`. |
 | footprint, `robot_radius`, `scale` | Measure from the USD. The numbers in the draft are starting points, not calibrated. |
 
-Mount the USD into the Isaac container the same way other robots use a host directory bind (see LunarBot's `HOST_LUNARBOT_DIR` pattern if you use that Arena tree). Do not open `FiveAges_W2.usda` by hand in a separate Isaac and also spawn it from Arena.
+GRScenes is mounted by `HOST_SCENES_DIR` in `~/FiveAges-VLN/arena_ws/.env`. Do not open `FiveAges_W2.usda` by hand in a separate Isaac and also spawn it from Arena.
 
-Smoke:
-
-```bash
-arena launch sim:=isaac robot:=FiveAges_W2 world:=grscenes_30 \
-  tm_robots:=scenario tm_obstacles:=scenario \
-  scenario:=scenario_001 save_data:=false
-```
-
-In Isaac, press Play. In RViz, open TaskGeneratorPanel and click Reset Task. Record only after both the robot and the pedestrians move:
+Smoke from `~/FiveAges-VLN/arena_ws` (`source ./arena`, then inside the container):
 
 ```bash
-arena launch sim:=isaac robot:=FiveAges_W2 world:=grscenes_30 \
+ros2 launch arena_bringup arena.launch.py \
+  sim:=isaac robot:=FiveAges_W2 world:=grscenes_30 \
   tm_robots:=scenario tm_obstacles:=scenario \
-  scenario:=scenario_001 save_data:=true
+  save_data:=false
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
 ```
+
+In Isaac, press Play. Record only after both the robot and the pedestrians move: same launch with `save_data:=true`, then set `task.scenario.file` again. See [LAUNCH_W2.md](LAUNCH_W2.md).
 
 ## 4. Post-process
 

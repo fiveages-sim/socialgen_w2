@@ -90,19 +90,26 @@ colcon build --symlink-install --packages-up-to arena_bringup arena_simulation_s
 source install/setup.bash
 ```
 
-Smoke (no files written):
+Smoke (no files written). `sim:=isaac` is required; the launch default is `dummy`. `tm_robots` and `tm_obstacles` must be `scenario` so the YAML start and goal are used:
 
 ```bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=false
+  sim:=isaac \
+  robot:=FiveAges_W2 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
+  save_data:=false
 ```
 
-In Isaac, press Play. Confirm W2 and the pedestrians move, and that Nav2 is planning around people. Then stop and record:
+`grscenes_30` already has a `default` scenario, so select `scenario_001` and reset:
 
 ```bash
-ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=true
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
 ```
+
+In Isaac, press Play. Confirm W2 and the pedestrians move, and that Nav2 is planning around people. Then stop and record with the same arguments and `save_data:=true`. Full steps: [docs/LAUNCH_W2.md](docs/LAUNCH_W2.md).
 
 After Play, check the sensors before you trust the logs:
 

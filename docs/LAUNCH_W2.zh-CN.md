@@ -37,14 +37,25 @@ source install/setup.bash
 
 ```bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 \
+  sim:=isaac \
   robot:=FiveAges_W2 \
-  scenario:=scenario_001 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
   save_data:=false
 ```
 
+- 必须写 `sim:=isaac`。启动默认的仿真器是 `dummy`。
 - `world:=grscenes_30` 加载场景 `MWHLEPQKTIFZIAABAAAAAAA8_usd`。
-- `scenario:=scenario_001` 加载已经装好的 YAML。机器人位姿是起点，最后一个路径点是终点。
+- `tm_robots:=scenario` 和 `tm_obstacles:=scenario` 才会读 `scenario.yaml`。机器人位姿是起点，最后一个路径点是终点。
+- 这个世界里已经有名为 `default` 的场景目录，第一次加载的是 `default`，不是 `scenario_001`。先指到 SocialGen 的文件再重置：
+
+```bash
+source /opt/arena_ws/install/setup.bash
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
+```
+
 - 在 Isaac 里按 Play。
 
 检查：
@@ -68,24 +79,64 @@ ros2 topic list | rg -i 'scan|lidar|camera|people'
 ```bash
 source /opt/arena_ws/install/setup.bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 \
+  sim:=isaac \
   robot:=FiveAges_W2 \
-  scenario:=scenario_001 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
   save_data:=true
 ```
 
-按 Play。等这一局结束（机器人到达终点，或场景超时）。想要更大的数据集，就用 `scenarios_generate` 再写更多场景，重复录制。
+栈起来之后，选中 SocialGen 场景并重置：
 
-原始日志写在这个工作区里 Arena 的录制目录（本分支的 `record_data_dir` / `save_data` 输出）。把这些文件留在 FiveAges 工作区。
+```bash
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
+```
+
+按 Play。等这一局结束（机器人到达终点；导航失败时记录器会丢掉这一次）。
+
+不想重启 Isaac、又要录多个场景时，保持这次 `save_data:=true` 的启动，在容器里另一个 shell 运行：
+
+```bash
+python3 /opt/arena_ws/src/Arena/scripts/batch_collect_scenarios.py \
+  --robot FiveAges_W2 \
+  --scenarios scenario_001
+```
+
+原始 episode 写在工作区里、Arena 源码的旁边：
+
+```text
+~/FiveAges-VLN/arena_ws/src/social_gen/traj_data/grscenes/grscenes_30/
+```
+
+容器里的路径是 `/opt/arena_ws/src/social_gen/traj_data/grscenes/grscenes_30/`。
 
 ## 第 5 步 — 把录像做成 W2 数据集
 
 对原始 episode 运行 Arena 的 `process_raw_to_dataset.py`，再运行 `annotate_with_instructions.py`。
 
-运行前把相机常数改成 W2 头部相机。脚本里自带的大约 1.645 m、30°，以及数据集名 `socialnav_132cm_30_30`，属于另一台机器人。请换一个新名字，例如 `socialnav_w2_head`，并在 `internnav_w2` 里使用这个名字。
+第一次转换之前，先改 `arena_isaac/arena_isaac/arena_isaac/data_logging/postprocess/process_raw_to_dataset.py`：把 `ROBOT_MODEL` 设成 `"FiveAges_W2"`，并用 W2 头部相机替换 `CAMERA_FORWARD_M`、`CAMERA_HEIGHT_M`、`CAMERA_PITCH_DEG`。文件里现在的大约前向 0.35 m、高度 1.645 m、俯仰 30° 属于另一台机器人，由这些数推出来的数据集目录名不能复用。在 Isaac 里量 prim `Head_V1/head_link2/head_camera/head_camera`，然后：
+
+```bash
+cd /opt/arena_ws
+python3 -m arena_isaac.data_logging.postprocess.process_raw_to_dataset \
+  --data-path src/social_gen/traj_data/grscenes/grscenes_30 \
+  --keep-src
+```
+
+`--keep-src` 会留下原始 npy，直到你检查过一条 episode。确认没问题再去掉它。
+
+指令标注需要 VLM 的 key，单独跑：
+
+```bash
+python3 -m arena_isaac.data_logging.postprocess.annotate_with_instructions \
+  --data-path src/social_gen/traj_data/grscenes/grscenes_30 \
+  --use-vlm
+```
 
 然后用 `internnav_w2` 里的 W2 训练脚本，在这个数据集上微调。
 
 ## 其他世界
 
-本分支上 `world:=grscenes_1` 到 `world:=grscenes_30` 都是 GRScenes 世界。在 `scenarios_generate` 里按该场景的 USD 名字编写场景，用 `scripts/install_scenario.sh` 装进去，启动时传入对应的 `world:=` 和 `scenario:=`。
+本分支上 `world:=grscenes_1` 到 `world:=grscenes_30` 都是 GRScenes 世界。在 `scenarios_generate` 里按该场景的 USD 名字编写场景，用 `scripts/install_scenario.sh` 装进去，启动时传入对应的 `world:=`，并把 `task.scenario.file` 设成场景目录名。

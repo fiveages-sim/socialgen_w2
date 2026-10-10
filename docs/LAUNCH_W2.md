@@ -37,14 +37,25 @@ source install/setup.bash
 
 ```bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 \
+  sim:=isaac \
   robot:=FiveAges_W2 \
-  scenario:=scenario_001 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
   save_data:=false
 ```
 
+- `sim:=isaac` is required. The launch default simulator is `dummy`.
 - `world:=grscenes_30` loads scene `MWHLEPQKTIFZIAABAAAAAAA8_usd`.
-- `scenario:=scenario_001` loads the installed YAML. The robot pose is the start. The last waypoint is the goal.
+- `tm_robots:=scenario` and `tm_obstacles:=scenario` read a `scenario.yaml`. The robot pose is the start. The last waypoint is the goal.
+- That world already has a `default` scenario folder, so the first load is `default`, not `scenario_001`. Point the task generator at the SocialGen file, then reset:
+
+```bash
+source /opt/arena_ws/install/setup.bash
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
+```
+
 - Press Play in Isaac.
 
 Check:
@@ -68,24 +79,64 @@ Stop this launch before recording. A smoke run with `save_data:=false` does not 
 ```bash
 source /opt/arena_ws/install/setup.bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 \
+  sim:=isaac \
   robot:=FiveAges_W2 \
-  scenario:=scenario_001 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
   save_data:=true
 ```
 
-Press Play. Let the episode finish (robot reaches the goal, or the scenario timeout). Repeat with more scenarios from `scenarios_generate` for a larger set.
+After the stack is up, select the SocialGen scenario and reset:
 
-Raw logs are written under the Arena record directory inside the workspace (the `record_data_dir` / `save_data` output of this branch). Keep those files with the FiveAges workspace.
+```bash
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
+```
+
+Press Play. Let the episode finish (robot reaches the goal, or navigation fails and the logger discards that attempt).
+
+To record several named scenarios without restarting Isaac, leave this launch running with `save_data:=true` and, in another container shell:
+
+```bash
+python3 /opt/arena_ws/src/Arena/scripts/batch_collect_scenarios.py \
+  --robot FiveAges_W2 \
+  --scenarios scenario_001
+```
+
+Raw episodes land in the workspace next to Arena:
+
+```text
+~/FiveAges-VLN/arena_ws/src/social_gen/traj_data/grscenes/grscenes_30/
+```
+
+Inside the container that path is `/opt/arena_ws/src/social_gen/traj_data/grscenes/grscenes_30/`.
 
 ## Step 5 — turn recordings into a W2 dataset
 
 On the raw episode, run Arena's `process_raw_to_dataset.py`, then `annotate_with_instructions.py`.
 
-Change the camera constants to the W2 head camera before you run them. The script's built-in values (about 1.645 m and 30°) and the dataset name `socialnav_132cm_30_30` belong to a different robot. Pick a new key, for example `socialnav_w2_head`, and use that key in `internnav_w2`.
+Before the first conversion, edit `arena_isaac/arena_isaac/arena_isaac/data_logging/postprocess/process_raw_to_dataset.py`: set `ROBOT_MODEL = "FiveAges_W2"` and replace `CAMERA_FORWARD_M`, `CAMERA_HEIGHT_M`, and `CAMERA_PITCH_DEG` with the W2 head camera. The values in the file now (about 0.35 m forward, 1.645 m high, 30°) belong to a different robot, and the dataset folder names derived from them must not be reused. Measure the W2 prim `Head_V1/head_link2/head_camera/head_camera` in Isaac, then:
+
+```bash
+cd /opt/arena_ws
+python3 -m arena_isaac.data_logging.postprocess.process_raw_to_dataset \
+  --data-path src/social_gen/traj_data/grscenes/grscenes_30 \
+  --keep-src
+```
+
+`--keep-src` leaves the raw npy in place until you have checked one episode. Drop it only after that check looks right.
+
+Instruction annotation needs a VLM key and is a separate step:
+
+```bash
+python3 -m arena_isaac.data_logging.postprocess.annotate_with_instructions \
+  --data-path src/social_gen/traj_data/grscenes/grscenes_30 \
+  --use-vlm
+```
 
 Then train with the W2 scripts in `internnav_w2` on that dataset key.
 
 ## Other worlds
 
-`world:=grscenes_1` … `world:=grscenes_30` are the GRScenes worlds on this branch. Author the scenario in `scenarios_generate` against that scene's USD name, install it with `scripts/install_scenario.sh`, and pass the matching `world:=` and `scenario:=`.
+`world:=grscenes_1` … `world:=grscenes_30` are the GRScenes worlds on this branch. Author the scenario in `scenarios_generate` against that scene's USD name, install it with `scripts/install_scenario.sh`, pass the matching `world:=`, and set `task.scenario.file` to the scenario folder name.

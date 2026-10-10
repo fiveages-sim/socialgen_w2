@@ -90,19 +90,26 @@ colcon build --symlink-install --packages-up-to arena_bringup arena_simulation_s
 source install/setup.bash
 ```
 
-先不录文件：
+先不录文件。必须写 `sim:=isaac`（默认是 `dummy`）。`tm_robots` 和 `tm_obstacles` 都要是 `scenario`，才会用 YAML 里的起点和终点：
 
 ```bash
 ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=false
+  sim:=isaac \
+  robot:=FiveAges_W2 \
+  world:=grscenes_30 \
+  tm_robots:=scenario \
+  tm_obstacles:=scenario \
+  save_data:=false
 ```
 
-在 Isaac 里按 Play。确认 W2 和行人都在动，Nav2 会绕开行人。然后停掉，再录：
+`grscenes_30` 里已经有一个叫 `default` 的场景，所以要改成 `scenario_001` 再重置：
 
 ```bash
-ros2 launch arena_bringup arena.launch.py \
-  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=true
+ros2 param set /task_generator_node task.scenario.file scenario_001
+ros2 service call /task_generator_node/reset_task std_srvs/srv/Empty
 ```
+
+在 Isaac 里按 Play。确认 W2 和行人都在动，Nav2 会绕开行人。然后停掉，用同样的参数把 `save_data:=true` 再录一次。逐步说明见 [docs/LAUNCH_W2.zh-CN.md](docs/LAUNCH_W2.zh-CN.md)。
 
 Play 之后、相信日志之前，先看传感器：
 
