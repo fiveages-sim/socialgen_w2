@@ -1,14 +1,12 @@
-# Draft Arena registration for FiveAges W2.
-# Copy to: arena_robots/arena_robots/robots/FiveAges_W2/model_params.yaml
+# Arena registration for FiveAges W2 (draft — finish by measuring the live stage).
+# Install into an Arena_W2 checkout:
+#   mkdir -p arena_robots/arena_robots/robots/FiveAges_W2
+#   cp this file → .../robots/FiveAges_W2/model_params.yaml
+# Then rebuild/refresh install share so `robot:=FiveAges_W2` resolves.
 #
-# NOT calibrated. Before the first launch, confirm:
-#   - usd_redirect exists inside the Isaac container
-#   - lidar / camera ROS topic names match payloads/ROS/ros2.usda
-#   - camera_prim_suffix exists under /World/Robots/<robot_stage_name>/
-#   - footprint and robot_radius match the USD
-#
-# Head-camera suffix below is taken from a FaSim W2 env layer
-# (Head_V1/head_link2/head_camera/head_camera). Re-check on the spawned stage.
+# Chassis is LinkHou S2 (holonomic). Art root in FaSim W2 is base_link.
+# Head camera prim (FaSim env): Head_V1/head_link2/head_camera/head_camera
+# Confirm lidar topic + camera prim after the first Isaac Play.
 
 observation_sources_string: lidar
 observation_sources:
@@ -18,7 +16,8 @@ collision_monitor_sources:
   - lidar
 observation_sources_dict:
   lidar:
-    # TODO: replace with the LaserScan topic the W2 ROS graph actually publishes.
+    # After launch, run: ros2 topic list | rg -i 'scan|lidar'
+    # Then set this to the namespaced LaserScan (Arena remaps under the robot ns).
     topic: ${namespace}/scan
     sensor_frame: ${frame}lidar_frame
     max_obstacle_height: 2.0
@@ -36,31 +35,31 @@ robot_odom_frame: odom
 robot_sensor_frame: lidar_frame
 robot_model: FiveAges_W2
 
-# TODO: point at the USD Isaac can open, with ROS enabled.
-# Examples (pick one that exists in the container):
-#   usd_redirect: ../../../deps/robot_usds/humanoid/FiveAges_W2/FiveAges_W2.usd
-#   usd_redirect: /data/fasim/robots/humanoid/FiveAges/Gen2/W2/FiveAges_W2.usda
+# Vendored via arena_robots/deps/robot_usds → fiveages-sim/fa-w2-usds
 usd_redirect: ../../../deps/robot_usds/humanoid/FiveAges_W2/FiveAges_W2.usd
 
-robot_radius: 0.45
+# Starting values from LinkHou_S2 registration; re-measure on the USD if Nav2 clips walls.
+robot_radius: 0.35
 scale: 1.0
-# TODO: replace with the real chassis outline in metres.
-footprint: "[ [0.35, 0.30], [0.35, -0.30], [-0.35, -0.30], [-0.35, 0.30] ]"
-is_holonomic: false
+footprint: "[ [0.28, 0.27], [0.28, -0.27], [-0.28, -0.27], [-0.28, 0.27] ]"
+is_holonomic: true
 z_offset: 0.0
 
 max_vel_x: 0.4
 max_vel_theta: 1.0
 max_speed_xy: 0.4
-velocity_smoother_max_velocity: [0.4, 0.0, 1.0]
-velocity_smoother_min_velocity: [0.0, 0.0, -1.0]
-velocity_smoother_max_accel: [0.4, 0.0, 1.5]
-velocity_smoother_max_decel: [-0.4, 0.0, -1.5]
+velocity_smoother_max_velocity: [0.4, 0.4, 1.0]
+velocity_smoother_min_velocity: [-0.4, -0.4, -1.0]
+velocity_smoother_max_accel: [0.4, 0.4, 1.5]
+velocity_smoother_max_decel: [-0.4, -0.4, -1.5]
+
+# If LaserScan frame_id is not lidar_frame, add a static TF here.
+# sensor_frame_transforms: []
 
 data_logger:
   robot_stage_name: FiveAges_W2
+  # Full prim = /World/Robots/<robot_stage_name>/<suffix>
   camera_prim_suffix: Head_V1/head_link2/head_camera/head_camera
-  # TODO: confirm the lidar prim relative to the spawned robot root.
   lidar_prim_suffix: base_link
   pedestrian_root_path: /World/Pedestrians
 

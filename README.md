@@ -1,85 +1,140 @@
 # SocialGen for FiveAges W2
 
-Scripts and docs for FiveAges-Sim members who want to **author social-navigation scenarios**, **run them in GRScenes with the W2 robot**, and **turn the recordings into InternNav fine-tuning data**.
+English guide for the FiveAges data pipeline. 中文见 [README.zh-CN.md](README.zh-CN.md).
 
-This repository is not a fork of Arena or InternNav. It follows the same idea as [internnav_arx_lift2s](https://github.com/fiveages-sim/internnav_arx_lift2s): a small integration repo that points at the other pieces.
+Org members use this stack to author pedestrian scenarios and record expert trajectories, then fine-tune InternNav for the **FiveAges W2** robot. The robot that drives during recording is Nav2. InternNav learns from those recordings. It does not draw the preview line in the scenario editor.
 
-## What each repository does
+## What each repo does
 
-| Repository | Role | Robot-specific? |
-| --- | --- | --- |
-| [scenarios_generate](https://github.com/fiveages-sim/scenarios_generate) | Draw waypoints and write `scenario.yaml` | No |
-| [Arena_W2](https://github.com/fiveages-sim/Arena_W2) | Launch a GRScenes world, spawn a robot, run HuNav pedestrians and Nav2 | Yes, once W2 is registered |
-| [robot_usds](https://github.com/fiveages-sim/robot_usds) | W2 USD (`humanoid/FiveAges_W2`) | Yes |
-| [internnav_w2](https://github.com/fiveages-sim/internnav_w2) | InternNav inference and fine-tune entry for W2 | Yes |
-| [LightNav-0_W2](https://github.com/fiveages-sim/LightNav-0_W2) | Separate W2 navigator | Not this data pipeline |
-
-`scenario.yaml` only stores start poses, goals, and pedestrian waypoints in world metres. The same file can be used for any robot. Arena decides which USD is spawned (`robot:=FiveAges_W2`).
-
-## What is already in this repo
-
-| Path | Purpose |
+| Repo | Role |
 | --- | --- |
-| `examples/grscenes_30/scenario_001/scenario.yaml` | Example episode for Arena world `grscenes_30` (GRScenes id `MWHLEPQKTIFZIAABAAAAAAA8_usd`) |
-| `arena/FiveAges_W2/model_params.yaml` | Draft Arena robot registration. Copy into an Arena checkout. Topics and camera height are not verified yet. |
-| `scripts/install_scenario.sh` | Copy a scenario into an Arena world folder. Refuses a Social-Nav checkout. |
-| `scripts/check_remotes.sh` | Fail if a git checkout's `origin` is `Social-Nav`. |
-| `docs/pipeline.md` | Collect → post-process → fine-tune |
+| [fiveages-sim/scenarios_generate](https://github.com/fiveages-sim/scenarios_generate) | Author `scenario.yaml` (robot start, goal, pedestrians). Robot-agnostic. |
+| [fiveages-sim/socialgen_w2](https://github.com/fiveages-sim/socialgen_w2) | This repo: pipeline docs, example YAML, W2 `model_params` draft, install helper. |
+| [fiveages-sim/Arena_W2](https://github.com/fiveages-sim/Arena_W2) branch `feature/w2-socialgen` | Launches GRScenes + W2 + HuNav + Nav2 and records data. |
+| `fiveages-sim/robots` (local: `~/FiveAges-VLN/fa-arena-robots`) | Arena registration (`model_params.yaml`) for FiveAges robots. Currently `FiveAges_W2`. |
+| [fiveages-sim/robot_usds](https://github.com/fiveages-sim/robot_usds) and [fa-w2-usds](https://github.com/fiveages-sim/fa-w2-usds) | USD assets. A USD alone does not spawn in Arena. |
+| `internnav_w2` | Fine-tune InternNav on the W2 dataset. |
+
+Do not push FiveAges or W2 changes to Social-Nav remotes. `scripts/check_remotes.sh` exits if `origin` contains `Social-Nav/`.
 
 ## Pipeline
 
 ```text
-scenarios_generate  →  scenario.yaml
-        │
-        ▼
-Arena_W2  robot:=FiveAges_W2  world:=grscenes_N  save_data:=true
-        │   Nav2 drives (expert). HuNav moves pedestrians. Logger writes RGB-D.
-        ▼
-process_raw_to_dataset.py  +  annotate_with_instructions.py
-        │
-        ▼
-internnav_w2 fine-tune
+scenarios_generate
+  → scenario.yaml
+  → Arena_W2 (GRScenes + FiveAges_W2 + HuNav + Nav2)
+  → recorded episode
+  → process_raw_to_dataset.py   (W2 camera, new dataset key)
+  → annotate_with_instructions.py
+  → internnav_w2 fine-tune
 ```
 
-Nav2 is the teacher. InternNav learns from the recorded images and the path Nav2 actually drove. The straight line in a scenario preview is only start→goal. It is not the driven path.
+1. **Author.** The editor or Gemini writes a start pose, a goal (the last robot waypoint), and pedestrian agents. The black line in the preview is start → goal only. Nav2 plans the real path at runtime.
+2. **Launch.** Arena loads the GRScenes USD for `world:=grscenes_N`, spawns `robot:=FiveAges_W2`, and loads `scenario:=...`. The robot pose in the YAML is the start. The last waypoint is the goal. Complexity 1 means the map and the goal pose are known to Nav2.
+3. **Drive.** Nav2 is the expert teacher (global planner plus the social local planner). Pedestrians come from HuNav on `/people`.
+4. **Record.** `save_data:=true` writes the episode. Do this only after you have seen the robot and the pedestrians move.
+5. **Process.** Convert raw logs to the InternNav dataset format using the **W2 head camera** height and pitch. Do not reuse the existing `socialnav_132cm_30_30` key. That key is a different camera.
+6. **Train.** Fine-tune on the new W2 dataset key in `internnav_w2`.
 
-## Important gap
+## Layout on this machine
 
-[Arena_W2](https://github.com/fiveages-sim/Arena_W2) is still an unmodified fork of [voshch/Arena](https://github.com/voshch/Arena). The GRScenes worlds, HuNav launch, and SocialGen logger used in practice live on the Social-Nav Arena branch `feature/social_yielding` (`Social-Nav/Arena5.0`).
+```text
+~/FiveAges-VLN/socialgen_w2     this repo
+~/FiveAges-VLN/Arena_W2         Arena source, branch feature/w2-socialgen
+~/FiveAges-VLN/arena_ws         Docker workspace (src/Arena → Arena_W2)
+~/FiveAges-VLN/fa-arena-robots  local robots package (push to fiveages-sim/robots)
+~/SocialNav/scenarios_generate  authoring checkout (or a clone of the FiveAges fork)
+```
 
-Do **not** push FiveAges or W2 commits to `Social-Nav/Arena5.0`, `Social-Nav/InternNav`, or `Social-Nav/hunav_sim`.
+`arena_ws` is separate from `~/SocialNav/arena_ws`. Docker mounts the workspace you start, so a YAML that lives only under Social-Nav is invisible to this workspace.
 
-Before the first W2 collection run, Arena_W2 still needs:
+GRScenes files are mounted from `HOST_SCENES_DIR` in `~/FiveAges-VLN/arena_ws/.env` (this machine: `/home/zy/Datasets/datasets/GRScenes-100`). Scene `MWHLEPQKTIFZIAABAAAAAAA8_usd` is Arena world `grscenes_30`.
 
-1. GRScenes worlds (`world:=grscenes_N`) and their USD mounts.
-2. `arena/FiveAges_W2/model_params.yaml` copied into `arena_robots/arena_robots/robots/FiveAges_W2/`.
-3. A confirmed head-camera prim and ROS topic names (lidar / depth / `cmd_vel`).
-4. Camera height and pitch in the post-process script. Do not reuse the Ai2_Bot2 setting `132cm_30deg` for W2.
+## Quick start: author a scenario
 
-## Quick start (after Arena_W2 can launch GRScenes)
+Full command list: [docs/QUICKSTART_scenarios_generate.md](docs/QUICKSTART_scenarios_generate.md).
 
 ```bash
-# 1. Author or reuse a scenario (robot-agnostic)
-git clone git@github.com:fiveages-sim/scenarios_generate.git
-# see that repo's README. Example already in this repo:
-#   examples/grscenes_30/scenario_001/scenario.yaml
-
-# 2. Install it into YOUR FiveAges Arena checkout (not ~/SocialNav/arena_ws)
-export ARENA_SRC=~/FiveAges-VLN/Arena_W2
-./scripts/check_remotes.sh "$ARENA_SRC"
-./scripts/install_scenario.sh grscenes_30 scenario_001
-
-# 3. Register W2 (once)
-mkdir -p "$ARENA_SRC/arena_robots/arena_robots/robots/FiveAges_W2"
-cp arena/FiveAges_W2/model_params.yaml \
-  "$ARENA_SRC/arena_robots/arena_robots/robots/FiveAges_W2/model_params.yaml"
-# Then fix usd_redirect, lidar topics, and camera prim. See docs/pipeline.md.
-
-# 4. Smoke, then record
-# arena launch sim:=isaac robot:=FiveAges_W2 world:=grscenes_30 \
-#   tm_robots:=scenario tm_obstacles:=scenario \
-#   scenario:=scenario_001 save_data:=false
-# Isaac Play → RViz Reset Task. When the robot AND pedestrians move, relaunch with save_data:=true.
+cd ~/SocialNav/scenarios_generate
+conda create -n scenarios python=3.10 -y
+conda activate scenarios
+pip install -r requirements.txt
+python scripts/manual_scenario_editor.py --scene MWHLEPQKTIFZIAABAAAAAAA8_usd
 ```
 
-Details: [docs/pipeline.md](docs/pipeline.md).
+Copy the generated YAML into Arena:
+
+```bash
+cd ~/FiveAges-VLN/socialgen_w2
+ARENA_SRC=~/FiveAges-VLN/Arena_W2 \
+  ./scripts/install_scenario.sh \
+  ~/SocialNav/scenarios_generate/new_outputs/MWHLEPQKTIFZIAABAAAAAAA8_usd/scenario_001/generated_scenario.yaml
+```
+
+`scenario_001` for `grscenes_30` is already installed on `feature/w2-socialgen`.
+
+## Launch GRScenes with W2 and record
+
+Details and the Chinese version: [docs/LAUNCH_W2.md](docs/LAUNCH_W2.md), [docs/LAUNCH_W2.zh-CN.md](docs/LAUNCH_W2.zh-CN.md).
+
+```bash
+cd ~/FiveAges-VLN/arena_ws
+source ./arena
+```
+
+Inside the container, once:
+
+```bash
+cd /opt/arena_ws
+colcon build --symlink-install --packages-up-to arena_bringup arena_simulation_setup arena_robots hunav_sim
+source install/setup.bash
+```
+
+Smoke (no files written):
+
+```bash
+ros2 launch arena_bringup arena.launch.py \
+  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=false
+```
+
+In Isaac, press Play. Confirm W2 and the pedestrians move, and that Nav2 is planning around people. Then stop and record:
+
+```bash
+ros2 launch arena_bringup arena.launch.py \
+  world:=grscenes_30 robot:=FiveAges_W2 scenario:=scenario_001 save_data:=true
+```
+
+After Play, check the sensors before you trust the logs:
+
+```bash
+ros2 topic list | rg -i 'scan|lidar|camera|people'
+```
+
+Set the lidar `topic` in `arena/FiveAges_W2/model_params.yaml` to the LaserScan you see. Confirm the head camera prim `Head_V1/head_link2/head_camera/head_camera`. Footprint and radius are starting values from the LinkHou chassis; re-measure if the robot clips walls.
+
+## After recording
+
+Use the Arena data scripts on the new episode, with W2 camera constants, and write a **new** dataset name. Then run instruction annotation and train in `internnav_w2`.
+
+Do not mix W2 episodes into a dataset recorded with another robot's camera height and pitch.
+
+## Adding another org robot
+
+USD list: https://github.com/fiveages-sim/robot_usds
+
+1. Add `arena_robots/robots/<Name>/model_params.yaml` (copy `FiveAges_W2`).
+2. Point `usd_redirect` at that USD.
+3. Launch with `robot:=<Name>`.
+
+Until that file exists, Arena cannot spawn the robot.
+
+## One GitHub step still open
+
+`~/FiveAges-VLN/fa-arena-robots` is committed locally (W2 registration plus the `fa-w2-usds` submodule). GitHub does not have `fiveages-sim/robots` yet, so the push was rejected. Create an empty repository `fiveages-sim/robots` (no README), then:
+
+```bash
+cd ~/FiveAges-VLN/fa-arena-robots
+git push -u origin main
+```
+
+This machine can already launch: `model_params.yaml` is on disk under `Arena_W2/arena_robots/.../robots/FiveAges_W2/`. After the GitHub repo exists, point Arena_W2's `arena_robots` submodule at `git@github.com:fiveages-sim/robots.git` so other members clone only the FiveAges registration.
