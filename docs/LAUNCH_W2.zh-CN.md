@@ -31,7 +31,7 @@ colcon build --symlink-install --packages-up-to arena_bringup arena_simulation_s
 source install/setup.bash
 ```
 
-`robot:=FiveAges_W2` 会去找 `install/arena_robots/share/arena_robots/robots/FiveAges_W2/model_params.yaml`。没有这个文件，这个机器人名字就没有注册。注册表在 `arena_robots`（FiveAges 包 `fa-arena-robots` / `fiveages-sim/robots`）。Arena_W2 的启动默认值已经是 `FiveAges_W2`。
+`robot:=FiveAges_W2` 会去找 `install/arena_robots/share/arena_robots/robots/FiveAges_W2/model_params.yaml`。没有这个文件，这个机器人名字就没有注册。注册表在 `arena_robots`（[fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots)）。Arena_W2 的启动默认值已经是 `FiveAges_W2`。
 
 ## 第 3 步 — 试启动（不录数据）
 

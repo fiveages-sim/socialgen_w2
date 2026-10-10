@@ -11,7 +11,7 @@ Org members use this stack to author pedestrian scenarios and record expert traj
 | [fiveages-sim/scenarios_generate](https://github.com/fiveages-sim/scenarios_generate) | Author `scenario.yaml` (robot start, goal, pedestrians). Robot-agnostic. |
 | [fiveages-sim/socialgen_w2](https://github.com/fiveages-sim/socialgen_w2) | This repo: pipeline docs, example YAML, W2 `model_params` draft, install helper. |
 | [fiveages-sim/Arena_W2](https://github.com/fiveages-sim/Arena_W2) branch `feature/w2-socialgen` | Launches GRScenes + W2 + HuNav + Nav2 and records data. |
-| `fiveages-sim/robots` (local: `~/FiveAges-VLN/fa-arena-robots`) | Arena registration (`model_params.yaml`) for FiveAges robots. Currently `FiveAges_W2`. |
+| [fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots) | Arena registration (`model_params.yaml`) for FiveAges robots. Currently `FiveAges_W2`. |
 | [fiveages-sim/robot_usds](https://github.com/fiveages-sim/robot_usds) and [fa-w2-usds](https://github.com/fiveages-sim/fa-w2-usds) | USD assets. A USD alone does not spawn in Arena. |
 | `internnav_w2` | Fine-tune InternNav on the W2 dataset. |
 
@@ -42,7 +42,7 @@ scenarios_generate
 ~/FiveAges-VLN/socialgen_w2     this repo
 ~/FiveAges-VLN/Arena_W2         Arena source, branch feature/w2-socialgen
 ~/FiveAges-VLN/arena_ws         Docker workspace (src/Arena → Arena_W2)
-~/FiveAges-VLN/fa-arena-robots  local robots package (push to fiveages-sim/robots)
+~/FiveAges-VLN/fa-arena-robots  local clone of fiveages-sim/fa-arena-robots
 ~/SocialNav/scenarios_generate  authoring checkout (or a clone of the FiveAges fork)
 ```
 
@@ -135,13 +135,6 @@ USD list: https://github.com/fiveages-sim/robot_usds
 
 Until that file exists, Arena cannot spawn the robot.
 
-## One GitHub step still open
+## Registration repository
 
-`~/FiveAges-VLN/fa-arena-robots` is committed locally (W2 registration plus the `fa-w2-usds` submodule). GitHub does not have `fiveages-sim/robots` yet, so the push was rejected. Create an empty repository `fiveages-sim/robots` (no README), then:
-
-```bash
-cd ~/FiveAges-VLN/fa-arena-robots
-git push -u origin main
-```
-
-This machine can already launch: `model_params.yaml` is on disk under `Arena_W2/arena_robots/.../robots/FiveAges_W2/`. After the GitHub repo exists, point Arena_W2's `arena_robots` submodule at `git@github.com:fiveages-sim/robots.git` so other members clone only the FiveAges registration.
+The W2 registration is on GitHub at [fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots). This machine can already launch: `model_params.yaml` is on disk under `Arena_W2/arena_robots/.../robots/FiveAges_W2/`. Point Arena_W2's `arena_robots` submodule at `git@github.com:fiveages-sim/fa-arena-robots.git` when other members should clone only the FiveAges registration.

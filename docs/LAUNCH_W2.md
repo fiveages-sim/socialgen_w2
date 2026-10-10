@@ -31,7 +31,7 @@ colcon build --symlink-install --packages-up-to arena_bringup arena_simulation_s
 source install/setup.bash
 ```
 
-`robot:=FiveAges_W2` looks up `install/arena_robots/share/arena_robots/robots/FiveAges_W2/model_params.yaml`. If that file is missing, the robot name is not registered. The registration lives in `arena_robots` (FiveAges package `fa-arena-robots` / `fiveages-sim/robots`). The Arena_W2 launch default is already `FiveAges_W2`.
+`robot:=FiveAges_W2` looks up `install/arena_robots/share/arena_robots/robots/FiveAges_W2/model_params.yaml`. If that file is missing, the robot name is not registered. The registration lives in `arena_robots` ([fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots)). The Arena_W2 launch default is already `FiveAges_W2`.
 
 ## Step 3 — smoke launch (no recording)
 

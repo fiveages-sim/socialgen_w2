@@ -11,7 +11,7 @@
 | [fiveages-sim/scenarios_generate](https://github.com/fiveages-sim/scenarios_generate) | 编写 `scenario.yaml`（机器人起点、终点、行人）。与具体机器人型号无关。 |
 | [fiveages-sim/socialgen_w2](https://github.com/fiveages-sim/socialgen_w2) | 本仓库：流程文档、示例 YAML、W2 的 `model_params` 草稿、安装脚本。 |
 | [fiveages-sim/Arena_W2](https://github.com/fiveages-sim/Arena_W2) 分支 `feature/w2-socialgen` | 启动 GRScenes + W2 + HuNav + Nav2，并录数据。 |
-| `fiveages-sim/robots`（本机：`~/FiveAges-VLN/fa-arena-robots`） | Arena 注册表（`model_params.yaml`）。目前是 `FiveAges_W2`。 |
+| [fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots) | Arena 注册表（`model_params.yaml`）。目前是 `FiveAges_W2`。 |
 | [fiveages-sim/robot_usds](https://github.com/fiveages-sim/robot_usds) 与 [fa-w2-usds](https://github.com/fiveages-sim/fa-w2-usds) | USD 资产。只有 USD 不能在 Arena 里生成机器人。 |
 | `internnav_w2` | 用 W2 数据集微调 InternNav。 |
 
@@ -42,7 +42,7 @@ scenarios_generate
 ~/FiveAges-VLN/socialgen_w2     本仓库
 ~/FiveAges-VLN/Arena_W2         Arena 源码，分支 feature/w2-socialgen
 ~/FiveAges-VLN/arena_ws         Docker 工作区（src/Arena → Arena_W2）
-~/FiveAges-VLN/fa-arena-robots  本地机器人注册包（推到 fiveages-sim/robots）
+~/FiveAges-VLN/fa-arena-robots  fiveages-sim/fa-arena-robots 的本地克隆
 ~/SocialNav/scenarios_generate  场景编写目录（或 FiveAges fork 的克隆）
 ```
 
@@ -135,13 +135,6 @@ USD 列表：https://github.com/fiveages-sim/robot_usds
 
 没有这个文件，Arena 就不能生成该机器人。
 
-## 还差一次 GitHub 操作
+## 注册表仓库
 
-`~/FiveAges-VLN/fa-arena-robots` 已经在本机提交（W2 注册表加上 `fa-w2-usds` 子模块）。GitHub 上还没有 `fiveages-sim/robots`，所以推送被拒绝。请先建一个空仓库 `fiveages-sim/robots`（不要勾选 README），然后：
-
-```bash
-cd ~/FiveAges-VLN/fa-arena-robots
-git push -u origin main
-```
-
-本机已经可以启动：`model_params.yaml` 在 `Arena_W2/arena_robots/.../robots/FiveAges_W2/`。仓库建好之后，把 Arena_W2 的 `arena_robots` 子模块改成 `git@github.com:fiveages-sim/robots.git`，其他成员克隆时就只会拿到 FiveAges 的注册表。
+W2 注册表已经在 [fiveages-sim/fa-arena-robots](https://github.com/fiveages-sim/fa-arena-robots)。本机已经可以启动：`model_params.yaml` 在 `Arena_W2/arena_robots/.../robots/FiveAges_W2/`。等其他成员只需要克隆 FiveAges 注册表时，把 Arena_W2 的 `arena_robots` 子模块改成 `git@github.com:fiveages-sim/fa-arena-robots.git`。
