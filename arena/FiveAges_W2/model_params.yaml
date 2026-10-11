@@ -43,7 +43,11 @@ robot_radius: 0.35
 scale: 1.0
 footprint: "[ [0.28, 0.27], [0.28, -0.27], [-0.28, -0.27], [-0.28, 0.27] ]"
 is_holonomic: true
-z_offset: 0.0
+# Wheel collisions bottom out 0.04 m below the USD origin. GRScenes floors are at
+# z=0 after the cm->m scale, on every world. z=0 therefore starts the chassis in
+# the floor; PhysX then shoves it up or flips it. 0.06 m leaves the wheels 2 cm
+# above the floor on Reset Task.
+z_offset: 0.06
 
 max_vel_x: 0.4
 max_vel_theta: 1.0
